@@ -6,23 +6,27 @@ from .constants import *
 from .cube import *
 
 
-def _main():
+def _main(face):
+    #face = 0
+
     cube = NxCube(4)
     print("Original:")
     print(cube)
 
+    """
     cube.state[1][1] = Color.RED
     print("Mutated:")
     print(cube)
+    """
 
-    cube._turn(1, True)
-    print("Turn CW:")
+    cube._slice(face, 1, True)
+    print("Slice CW:")
     print(cube)
 
-    cube._turn(1, False)
-    print("Turn CCW (should be original):")
+    cube._slice(face, 1, False)
+    print("Slice CCW (should be original):")
     print(cube)
 
-    cube._turn(1, False)
-    print("Turn CCW again:")
+    cube._slice(face, 1, False)
+    print("Slice CCW again:")
     print(cube)

@@ -56,8 +56,11 @@ class NxCube:
         # White
         s += self.face_to_str(5, offset=2*self.n)
 
-        # Green
-        s += self.face_to_str(3, offset=2*self.n)
+        # Green (need to rotate 180deg)
+        green = [line.strip().split(" ") for line in self.face_to_str(3).strip().split("\n")[:-1]]
+        green = [line[::-1] for line in green[::-1]]
+        for line in green:
+            s += " " * (2*self.n) + " ".join(line) + "\n"
 
         return s
 
@@ -134,3 +137,75 @@ class NxCube:
                 face[left] = top_seg
                 face[bottom] = left_seg
                 face[right] = bottom_seg
+
+    def _slice(self, face_ind: int, depth: int, dir: bool) -> None:
+        """
+        Do a slice.
+        Note: If depth is 0, it acts on the face.
+        But it only changes the lateral sides; the face itself is not rotated.
+        """
+        # First find the np slices for the 4 lateral sides.
+        # Unfortunately, it is just manual casework.
+        if face_ind == 0:
+            # Yellow face
+            slices = (
+                np.s_[1, depth, :],   # Blue
+                np.s_[2, depth, :],   # Red
+                np.s_[3, depth, :],   # Green
+                np.s_[4, depth, :],   # Orange
+            )
+        elif face_ind == 1:
+            # Blue face
+            slices = (
+                np.s_[5, depth, :],        # White
+                np.s_[2, ::-1, depth],     # Red
+                np.s_[0, -depth-1, ::-1],  # Yellow
+                np.s_[4, :, -depth-1],     # Orange
+            )
+        elif face_ind == 2:
+            # Red face
+            slices = (
+                np.s_[5, :, -depth-1],   # White
+                np.s_[3, ::-1, depth],   # Green
+                np.s_[0, :, -depth-1],   # Yellow
+                np.s_[1, :, -depth-1],   # Blue
+            )
+        elif face_ind == 3:
+            # Green face
+            slices = (
+                np.s_[5, -depth-1, ::-1],  # White
+                np.s_[4, ::-1, depth],     # Orange
+                np.s_[0, depth, :],        # Yellow
+                np.s_[2, :, -depth-1],     # Red
+            )
+        elif face_ind == 4:
+            # Orange face
+            slices = (
+                np.s_[5, ::-1, depth],   # White
+                np.s_[1, ::-1, depth],   # Blue
+                np.s_[0, ::-1, depth],   # Yellow
+                np.s_[3, :, -depth-1],   # Green
+            )
+        elif face_ind == 5:
+            # White face
+            slices = (
+                np.s_[3, -depth-1, ::-1],  # Green
+                np.s_[2, -depth-1, ::-1],  # Red
+                np.s_[1, -depth-1, ::-1],  # Blue
+                np.s_[4, -depth-1, ::-1],  # Orange
+            )
+        else:
+            raise ValueError("Invalid face index.")
+
+        # Now rotate the lateral sides.
+        segments = [self.state[s].copy() for s in slices]
+        if dir:
+            self.state[slices[0]] = segments[1]
+            self.state[slices[1]] = segments[2]
+            self.state[slices[2]] = segments[3]
+            self.state[slices[3]] = segments[0]
+        else:
+            self.state[slices[0]] = segments[3]
+            self.state[slices[1]] = segments[0]
+            self.state[slices[2]] = segments[1]
+            self.state[slices[3]] = segments[2]
