@@ -5,6 +5,7 @@ Rubik's cube representation and solver.
 from .constants import *
 from .cube import *
 from .move import *
+from . import solver
 
 
 def _main(face):

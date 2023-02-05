@@ -51,3 +51,14 @@ Now rotate back to the blue face. We already numbered it before.
 Rotate it forward to reveal the white face, which is ``face = 5``.
 
 .. image:: images/Faces5.jpg
+
+3D Coords
+---------
+
+The point ``(0, 0, 0)`` is the Orange, Blue, White corner.
+
+X increases towards Red.
+
+Y increases towards Green.
+
+Z increases towards Yellow.
