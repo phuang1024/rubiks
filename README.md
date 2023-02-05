@@ -1,2 +1,3 @@
-# rubiks
-Rubik's cube library and solver for C++.
+# Rubiks
+
+Rubik's cube library and solver.
