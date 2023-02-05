@@ -5,6 +5,7 @@ __all__ = (
 import numpy as np
 
 from .constants import *
+from .move import NxCubeMove
 
 
 class NxCube:
@@ -16,6 +17,7 @@ class NxCube:
     """
 
     n: int
+    stack: list[NxCubeMove]
     # State is np array shape (6, n, n)
     # See docs for the order of stuff.
     state: np.ndarray
@@ -25,6 +27,8 @@ class NxCube:
         Initialize as solved.
         """
         self.n = n
+        self.stack = []
+
         self.state = np.zeros((6, n, n), dtype=np.int8)
         self.state[0] = Color.YELLOW
         self.state[1] = Color.BLUE
@@ -88,6 +92,36 @@ class NxCube:
             s += Color.ANSI_RESET
 
         return s
+
+    def move(self, move: NxCubeMove | str) -> None:
+        """
+        Executes the move.
+        Note: If slices extends all the way thru cube, the opposite face is also rotated.
+        i.e. U0:3 on 3x3 rotates whole cube.
+        """
+        if isinstance(move, str):
+            move = NxCubeMove.from_str(move)
+
+        slices = move.slices
+        if slices is None:
+            slices = (0, 1)
+
+        assert slices[1] <= self.n
+        for s in range(slices[0], slices[1]):
+            self._slice(move.face, s, move.dir)
+        if slices[0] == 0:
+            self._turn(move.face, move.dir)
+        if slices[1] == self.n:
+            self._turn(Color.opposite(move.face), not move.dir)
+
+        self.stack.append(move)
+
+    def moves(self, moves: list[NxCubeMove | str]) -> None:
+        """
+        Executes a list of moves.
+        """
+        for move in moves:
+            self.move(move)
 
     def _turn(self, face_ind: int, dir: bool) -> None:
         """
