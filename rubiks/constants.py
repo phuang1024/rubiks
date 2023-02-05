@@ -5,12 +5,12 @@ __all__ = (
 
 class Color:
     """Color of a Rubik's Cube piece."""
-    WHITE = 0
-    YELLOW = 1
-    GREEN = 2
-    BLUE = 3
-    RED = 4
-    ORANGE = 5
+    YELLOW = 0
+    BLUE = 1
+    RED = 2
+    GREEN = 3
+    ORANGE = 4
+    WHITE = 5
 
     ANSI_W = "\033[97m"
     ANSI_Y = "\033[93m"

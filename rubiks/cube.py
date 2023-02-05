@@ -4,7 +4,7 @@ __all__ = (
 
 import numpy as np
 
-from constants import *
+from .constants import *
 
 
 class NxCube:
@@ -44,20 +44,20 @@ class NxCube:
         s = ""
 
         # Yellow
-        s += self.face_to_str(0, offset=6)
+        s += self.face_to_str(0, offset=2*self.n)
 
         # Orange, blue, red
         orange = self.face_to_str(4).split("\n")
         blue = self.face_to_str(1).split("\n")
         red = self.face_to_str(2).split("\n")
-        for line in range(3):
+        for line in range(self.n):
             s += orange[line] + blue[line] + red[line] + "\n"
 
         # White
-        s += self.face_to_str(5, offset=6)
+        s += self.face_to_str(5, offset=2*self.n)
 
         # Green
-        s += self.face_to_str(3, offset=6)
+        s += self.face_to_str(3, offset=2*self.n)
 
         return s
 
@@ -70,9 +70,9 @@ class NxCube:
         :param offset: Offset from the left side of the terminal.
         """
         s = ""
-        for y in range(3):
+        for y in range(self.n):
             s += " " * offset
-            for x in range(3):
+            for x in range(self.n):
                 col = self.state[face, y, x]
                 if ansi:
                     s += Color.col_to_ansi(col) + "#"
@@ -86,18 +86,51 @@ class NxCube:
 
         return s
 
+    def _turn(self, face_ind: int, dir: bool) -> None:
+        """
+        ONLY turns the face. Doesn't change the lateral slices affected.
 
-"""
-      # # #
-      # # #
-      # # #
-# # # # # # # # #
-# # # # # # # # #
-# # # # # # # # #
-      # # #
-      # # #
-      # # #
-      # # #
-      # # #
-      # # #
-"""
+        :param dir: cw if True else ccw
+        """
+        # Go ring by ring.
+        rings = (self.n + 1) // 2
+        face = self.state[face_ind]
+        for ring in range(rings):
+            ring_size = self.n - 2 * ring
+            if ring_size == 1:
+                continue
+            padding = (self.n - ring_size) // 2
+
+            # Inclusive coords.
+            bounds = (padding, self.n - padding - 1)
+
+            # Get slices for each of 4 segments.
+            top = np.s_[bounds[0], bounds[0] : bounds[1]]
+            right = np.s_[bounds[0] : bounds[1], bounds[1]]
+            bottom = np.s_[bounds[1], bounds[1] : bounds[0] : -1]
+            left = np.s_[bounds[1] : bounds[0] : -1, bounds[0]]
+
+            top_seg = face[top].copy()
+            right_seg = face[right].copy()
+            bottom_seg = face[bottom].copy()
+            left_seg = face[left].copy()
+
+            # Switch them.
+            if dir:
+                """
+                face[top], face[right], face[bottom], face[left] = (
+                    face[left], face[top], face[right], face[bottom])
+                """
+                face[top] = left_seg
+                face[left] = bottom_seg
+                face[bottom] = right_seg
+                face[right] = top_seg
+            else:
+                """
+                face[top], face[right], face[bottom], face[left] = (
+                    face[right], face[bottom], face[left], face[top])
+                """
+                face[top] = right_seg
+                face[left] = top_seg
+                face[bottom] = left_seg
+                face[right] = bottom_seg
