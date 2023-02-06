@@ -177,7 +177,7 @@ public:
      * Executes a move.
      * Calls a combination of turn() and slice()
      */
-    void push(Move& move) {
+    void push(Move move) {
         for (int i = move.start; i < move.end; i++) {
             slice(move.face, i, move.dir);
         }
