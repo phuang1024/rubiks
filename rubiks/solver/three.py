@@ -114,6 +114,71 @@ def solve_cross(cube: NxCube):
         input()
 
 
+def solve_white(cube: NxCube):
+    def get_white_corners(cube):
+        info = (
+            ("WBO", (0, 0, 0)),
+            ("WBR", (2, 0, 0)),
+            ("WGO", (0, 2, 0)),
+            ("WGR", (2, 2, 0)),
+        )
+        ret = []
+        for code, pos in info:
+            real_pos = find_corner(cube, code)
+            correct = False
+            if real_pos == pos:
+                # Check if correct
+                slices = list(xyz_to_slices(real_pos, cube.n))
+                bottom = [s for s in slices if s[0] == Color.WHITE][0]
+                correct = cube.state[bottom] == Color.WHITE
+            ret.append((real_pos, pos, correct))
+
+        return ret
+
+    def pos_to_lateral(pos):
+        """
+        Returns the two lateral faces containing the corner pos.
+        """
+        pos = pos[:2]
+        if pos == (0, 0):
+            return (0, 3)
+        if pos == (2, 0):
+            return (0, 1)
+        if pos == (0, 2):
+            return (2, 3)
+        if pos == (2, 2):
+            return (2, 1)
+        raise ValueError(f"Invalid pos {pos}")
+
+    while True:
+        corners = get_white_corners(cube)
+        for real, nom, correct in corners:
+            if real != nom or not correct:
+                break
+        else:
+            break
+
+        if real[2] == 0:
+            # Move it out of the incorrect pos.
+            lat1, lat2 = pos_to_lateral(real)
+            cube.move(NxCubeMove(lat1+1, True))
+            cube.move(NxCubeMove(Color.YELLOW, False))
+            cube.move(NxCubeMove(lat1+1, False))
+            continue
+
+        # Move it above the correct pos.
+        if real[:2] != nom[:2]:
+            corner_indices = ((0, 0), (2, 0), (2, 2), (0, 2))
+            real_idx = corner_indices.index(real[:2])
+            nom_idx = corner_indices.index(nom[:2])
+            delta = (real_idx - nom_idx) % 4
+            for _ in range(delta):
+                cube.move(NxCubeMove(Color.YELLOW, True))
+
+        # Insert it.
+        lat1, lat2 = pos_to_lateral(nom)
+
+
 def solve_3x3(cube: NxCube) -> None:
     """
     Uses the beginner's method.
