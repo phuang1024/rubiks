@@ -16,12 +16,17 @@ class NxCubeMove:
     - Ux:y' ...: Counter-clockwise of the above.
     """
 
-    def __init__(self, face: int, dir: bool, slices: tuple[int, int] | None) -> None:
+    face: int
+    dir: bool
+    slices: tuple[int, int] | None
+
+    def __init__(self, face: int | str, dir: bool, slices: tuple[int, int] | None = None) -> None:
         """
         :param face: Use Color.YELLOW, etc. with cube in standard orientation (see NxCube)
+            Or "U", "F", etc.
         :param slices: Use None for just top layer (the face).
         """
-        self.face = face
+        self.face = (face if isinstance(face, int) else Color.face_to_col(face))
         self.dir = dir
         self.slices = slices
         if self.slices is not None:
