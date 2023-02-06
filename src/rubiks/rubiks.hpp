@@ -12,7 +12,18 @@ struct StrideIter {
     uint8_t* ptr;
     int stride;
 
-    StrideIter(uint8_t* ptr, int stride) : ptr(ptr), stride(stride) {}
+    StrideIter() : ptr(nullptr), stride(0) {
+        set(nullptr, 0);
+    }
+
+    StrideIter(uint8_t* ptr, int stride) {
+        set(ptr, stride);
+    }
+
+    void set(uint8_t* ptr, int stride) {
+        this->ptr = ptr;
+        this->stride = stride;
+    }
 
     uint8_t& operator*() const {
         return *ptr;
@@ -30,9 +41,15 @@ struct StrideIter {
 class Cube {
 private:
     uint8_t* state;
-    uint8_t size;
 
+    /**
+     * Will add size to sx, sy ONCE if they are below 0.
+     */
     int offset(int face, int y, int x) const {
+        if (y < 0)
+            y += size;
+        if (x < 0)
+            x += size;
         return (face*size*size) + (y*size) + x;
     }
 
@@ -93,7 +110,78 @@ private:
         }
     }
 
+    /**
+     * Rotate a slice.
+     * Note: if depth is 0, it acts on the face.
+     * BUT, only changes the lateral sides; the face itself is not rotated.
+     * Call turn() with this to achieve a "real" turn.
+     */
+    void slice(int face, int depth, bool dir) {
+        // First get the iterators for each side.
+        // Unfortunately, just manual casework.
+        StrideIter iters[4];
+        switch (face) {
+            case YELLOW:
+                iters[0] = get_iter(BLUE, depth, 0, 0, 1);
+                iters[1] = get_iter(RED, depth, 0, 0, 1);
+                iters[2] = get_iter(GREEN, depth, 0, 0, 1);
+                iters[3] = get_iter(ORANGE, depth, 0, 0, 1);
+                break;
+            case BLUE:
+                iters[0] = get_iter(WHITE, depth, 0, 0, 1);
+                iters[1] = get_iter(RED, -1, depth, -1, 0);
+                iters[2] = get_iter(YELLOW, -depth-1, -1, 0, -1);
+                iters[3] = get_iter(ORANGE, 0, -depth-1, 1, 0);
+                break;
+            case RED:
+                iters[0] = get_iter(WHITE, 0, -depth-1, 1, 0);
+                iters[1] = get_iter(GREEN, -1, depth, -1, 0);
+                iters[2] = get_iter(YELLOW, 0, -depth-1, 1, 0);
+                iters[3] = get_iter(BLUE, 0, -depth-1, 1, 0);
+                break;
+            case GREEN:
+                iters[0] = get_iter(WHITE, -depth-1, -1, 0, -1);
+                iters[1] = get_iter(ORANGE, -1, depth, -1, 0);
+                iters[2] = get_iter(YELLOW, depth, 0, 0, 1);
+                iters[3] = get_iter(RED, 0, -depth-1, 1, 0);
+                break;
+            case ORANGE:
+                iters[0] = get_iter(WHITE, -1, depth, -1, 0);
+                iters[1] = get_iter(BLUE, -1, depth, -1, 0);
+                iters[2] = get_iter(YELLOW, -1, depth, -1, 0);
+                iters[3] = get_iter(GREEN, 0, -depth-1, 1, 0);
+                break;
+            case WHITE:
+                iters[0] = get_iter(GREEN, -depth-1, -1, 0, -1);
+                iters[1] = get_iter(RED, -depth-1, -1, 0, -1);
+                iters[2] = get_iter(BLUE, -depth-1, -1, 0, -1);
+                iters[3] = get_iter(ORANGE, -depth-1, -1, 0, -1);
+                break;
+        }
+
+        for (int i = 0; i < size; i++) {
+            uint8_t tmp = *iters[0];
+            if (dir) {
+                *iters[0] = *iters[1];
+                *iters[1] = *iters[2];
+                *iters[2] = *iters[3];
+                *iters[3] = tmp;
+            } else {
+                *iters[0] = *iters[3];
+                *iters[3] = *iters[2];
+                *iters[2] = *iters[1];
+                *iters[1] = tmp;
+            }
+            iters[0].inc();
+            iters[1].inc();
+            iters[2].inc();
+            iters[3].inc();
+        }
+    }
+
 public:
+    int8_t size;
+
     ~Cube() {
         delete[] state;
     }
@@ -123,9 +211,9 @@ public:
         std::string face_sep(face_width, ' ');
 
         // Yellow
-        for (int y = 0; y < 3; y++) {
+        for (int y = 0; y < cube.size; y++) {
             os << face_sep;
-            for (int x = 0; x < 3; x++) {
+            for (int x = 0; x < cube.size; x++) {
                 color_ostream(os, *cube.address(YELLOW, y, x));
                 os << "# ";
             }
@@ -133,16 +221,16 @@ public:
         }
 
         // Orange, blue, red
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
+        for (int y = 0; y < cube.size; y++) {
+            for (int x = 0; x < cube.size; x++) {
                 color_ostream(os, *cube.address(ORANGE, y, x));
                 os << "# ";
             }
-            for (int x = 0; x < 3; x++) {
+            for (int x = 0; x < cube.size; x++) {
                 color_ostream(os, *cube.address(BLUE, y, x));
                 os << "# ";
             }
-            for (int x = 0; x < 3; x++) {
+            for (int x = 0; x < cube.size; x++) {
                 color_ostream(os, *cube.address(RED, y, x));
                 os << "# ";
             }
@@ -150,9 +238,9 @@ public:
         }
 
         // White
-        for (int y = 0; y < 3; y++) {
+        for (int y = 0; y < cube.size; y++) {
             os << face_sep;
-            for (int x = 0; x < 3; x++) {
+            for (int x = 0; x < cube.size; x++) {
                 color_ostream(os, *cube.address(WHITE, y, x));
                 os << "# ";
             }
@@ -160,9 +248,9 @@ public:
         }
 
         // Green (reversed)
-        for (int y = 2; y >= 0; y--) {
+        for (int y = cube.size-1; y >= 0; y--) {
             os << face_sep;
-            for (int x = 2; x >= 0; x--) {
+            for (int x = cube.size-1; x >= 0; x--) {
                 color_ostream(os, *cube.address(GREEN, y, x));
                 os << "# ";
             }
