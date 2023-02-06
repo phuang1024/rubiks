@@ -66,6 +66,12 @@ class NxCube:
         for line in green:
             s += " " * (2*self.n) + " ".join(line) + "\n"
 
+        s += "\n"
+        s += Color.ANSI_RESET
+        s += "Move stack: "
+        s += " ".join([str(move) for move in self.stack])
+        s += "\n"
+
         return s
 
     def face_to_str(self, face: int, ansi: bool = True, spacing: int = 1, offset: int = 0) -> str:

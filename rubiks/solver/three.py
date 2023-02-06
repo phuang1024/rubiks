@@ -9,12 +9,25 @@ from .utils import *
 
 
 def solve_cross(cube: NxCube):
-    def next_lateral(x):
-        """
-        Lateral faces 1, 2, 3, 4.
-        This function returns add one, looping back.
-        """
-        return (x % 4) + 1
+    def find_white_edges(cube):
+        blue = next(find_edges(cube, "BW"))
+        red = next(find_edges(cube, "RW"))
+        green = next(find_edges(cube, "GW"))
+        orange = next(find_edges(cube, "OW"))
+        edges = (blue, red, green, orange)
+        return edges
+
+    def pos_to_lateral(pos):
+        pos = pos[:2]
+        if pos == (1, 0):
+            return 0
+        if pos == (2, 1):
+            return 1
+        if pos == (1, 2):
+            return 2
+        if pos == (0, 1):
+            return 3
+        raise ValueError(f"Invalid pos {pos}")
 
     def cycle_available(cube: NxCube, available, target: int):
         """
@@ -29,11 +42,7 @@ def solve_cross(cube: NxCube):
 
     # First move all edges to yellow center.
     while True:
-        blue = next(find_edges(cube, "BW"))
-        red = next(find_edges(cube, "RW"))
-        orange = next(find_edges(cube, "OW"))
-        green = next(find_edges(cube, "GW"))
-        edges = (blue, red, orange, green)
+        edges = find_white_edges(cube)
         if all(e[2] == 2 for e in edges):
             break
 
@@ -41,11 +50,7 @@ def solve_cross(cube: NxCube):
         available = [True] * 4
         for edge in edges:
             if edge[2] == 2:
-                match (edge[0], edge[1]):
-                    case (1, 0): available[0] = False
-                    case (2, 1): available[1] = False
-                    case (1, 2): available[2] = False
-                    case (0, 1): available[3] = False
+                available[pos_to_lateral(edge)] = False
 
         # Find edge to move rn.
         target = max((e for e in edges if e[2] != 2), key=lambda e: e[2])
@@ -70,6 +75,43 @@ def solve_cross(cube: NxCube):
         cube.move(NxCubeMove(other_face, dir))
         if target[2] == 0:
             cube.move(NxCubeMove(other_face, dir))
+
+    print(cube)
+    input()
+
+    # Now move them to the white center.
+    while True:
+        edges = find_white_edges(cube)
+        for i, e in enumerate(edges):
+            if e[2] == 2:
+                target = e
+                index = i
+                break
+        else:
+            break
+
+        slices = list(xyz_to_slices(target, cube.n))
+        is_flipped = [s for s in slices if cube.state[s] == Color.WHITE][0][0] != Color.YELLOW
+
+        if is_flipped:
+            target_lateral = (index - 1) % 4
+        else:
+            target_lateral = index
+        curr_lateral = pos_to_lateral(target)
+        for _ in range((curr_lateral-target_lateral) % 4):
+            cube.move(NxCubeMove(Color.YELLOW, True))
+        if is_flipped:
+            cube.move(NxCubeMove(target_lateral+1, True))
+            cube.move(NxCubeMove(Color.YELLOW, False))
+            next_face = (target_lateral + 1) % 4
+            cube.move(NxCubeMove(next_face+1, False))
+        else:
+            for _ in range(2):
+                cube.move(NxCubeMove(target_lateral+1, True))
+
+        print(target)
+        print(cube)
+        input()
 
 
 def solve_3x3(cube: NxCube) -> None:
