@@ -35,6 +35,28 @@ struct StrideIter {
 };
 
 
+struct Move {
+    int face;
+    bool dir;
+    // Slice start and end, not including end.
+    int start;
+    int end;
+
+    /**
+     * Unitialized; may contain garbage.
+     */
+    Move() {
+    }
+
+    Move(int face, bool dir, int start, int end) {
+        this->face = face;
+        this->dir = dir;
+        this->start = start;
+        this->end = end;
+    }
+};
+
+
 /**
  * Standard NxNxN cube.
  */
@@ -202,6 +224,21 @@ public:
         }
     }
 
+    /**
+     * Executes a move.
+     * Calls a combination of turn() and slice()
+     */
+    void push(Move& move) {
+        for (int i = move.start; i < move.end; i++) {
+            slice(move.face, i, move.dir);
+        }
+        if (move.start == 0) {
+            turn(move.face, move.dir);
+        }
+        if (move.end == size) {
+            turn(opp_color(move.face), !move.dir);
+        }
+    }
 
     /**
      * Prints a net of the cube.

@@ -23,3 +23,15 @@ void color_ostream(std::ostream& os, unsigned char color) {
         default: break;
     }
 }
+
+unsigned char opp_color(unsigned char color) {
+    switch (color) {
+        case YELLOW: return WHITE;
+        case BLUE:   return GREEN;
+        case RED:    return ORANGE;
+        case GREEN:  return BLUE;
+        case ORANGE: return RED;
+        case WHITE:  return YELLOW;
+        default: return 0;
+    }
+}
