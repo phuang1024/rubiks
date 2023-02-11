@@ -11,8 +11,6 @@
  */
 class Cube {
 private:
-    uint8_t* state;
-
     /**
      * Will add size to sx, sy ONCE if they are below 0.
      */
@@ -152,6 +150,7 @@ private:
 
 public:
     int8_t size;
+    uint8_t* state;
 
     ~Cube() {
         delete[] state;

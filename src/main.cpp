@@ -1,6 +1,7 @@
 #include <iostream>
 
-#include <rubiks.hpp>
+#include "rubiks.hpp"
+#include "solver.hpp"
 
 
 void scramble(Cube& cube) {
@@ -43,8 +44,22 @@ void scramble(Cube& cube) {
 }
 
 
+void small_scramble(Cube& cube) {
+    cube.push(Move(RED, true));
+    cube.push(Move(YELLOW, true));
+    cube.push(Move(BLUE, true));
+    cube.push(Move(GREEN, true));
+    cube.push(Move(WHITE, true));
+    cube.push(Move(ORANGE, true));
+}
+
+
 int main() {
     Cube cube(3);
-    scramble(cube);
+    small_scramble(cube);
     std::cout << cube << std::endl;
+
+    std::vector<Move> moves;
+    dfs_3x3(cube, 30, moves);
+    std::cout << moves.size() << std::endl;
 }

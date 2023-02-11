@@ -10,7 +10,7 @@ constexpr unsigned char
     WHITE = 5;
 
 
-void color_ostream(std::ostream& os, unsigned char color) {
+inline void color_ostream(std::ostream& os, unsigned char color) {
     switch (color) {
         case YELLOW: os << "\033[93m"; break;
         case BLUE:   os << "\033[94m"; break;
@@ -22,7 +22,7 @@ void color_ostream(std::ostream& os, unsigned char color) {
     }
 }
 
-unsigned char opp_color(unsigned char color) {
+inline unsigned char opp_color(unsigned char color) {
     switch (color) {
         case YELLOW: return WHITE;
         case BLUE:   return GREEN;

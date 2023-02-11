@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -O3 -I./rubiks# -L./rubiks -lrubiks
-CXXFILES = main.o
+CXXFILES = main.o search.o
 
 .PHONY: build clean
 

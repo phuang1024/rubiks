@@ -31,4 +31,8 @@ struct Move {
         this->start = start;
         this->end = end;
     }
+
+    Move reverse() const {
+        return Move(face, !dir, start, end);
+    }
 };
