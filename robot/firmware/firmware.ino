@@ -1,17 +1,29 @@
 /**
  * The big brain tells microcontroller exact movements through Serial.
  * For all commands INCLUDING 0, sends additional 0 byte when done.
+ *
+ * (x) means you fill this in.
+ * (x) is 1 byte unsigned
+ * (2x) is 2 bytes unsigned big endian
+ *
  * Available commands:
  * 0(x) : Echo byte (x)
  * 1(x) : Set servo to angle (x) (0-180)
  * 2(i) : Turn off stepper (i) (0 or 1)
  * 3(i) : Turn on stepper (i) (0 or 1)
- * 4(i)(d)(s)(2t) : Move stepper (i) direction (d), (s) steps, (t) (2byte unsigned) us per step.
+ * 4(i)(d)(2s)(2t) : Move stepper (i) direction (d), (s) steps, (t) us per step.
 */
 
 #include <Servo.h>
 
 constexpr int SERVO_OFFSET = 0;
+
+
+uint16_t read16() {
+    uint16_t val = Serial.read();
+    val = (val << 8) | Serial.read();
+    return val;
+}
 
 
 void setup() {
@@ -40,7 +52,7 @@ void setup() {
             case 1: req = 1; break;
             case 2: req = 1; break;
             case 3: req = 1; break;
-            case 4: req = 4; break;
+            case 4: req = 6; break;
         }
         while (Serial.available() < req);
 
@@ -59,9 +71,8 @@ void setup() {
                 digitalWrite(pin_offset, command == 2);
             } else {
                 int dir = Serial.read();
-                int steps = Serial.read();
-                int time = Serial.read();
-                time = time << 8 | Serial.read();
+                int steps = read16();
+                int time = read16();
 
                 digitalWrite(pin_offset + 1, dir);
                 for (int i = 0; i < steps; i++) {
@@ -70,6 +81,8 @@ void setup() {
                     delayMicroseconds(time);
                 }
             }
+        } else {
+            continue;
         }
 
         Serial.write(0);
