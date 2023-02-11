@@ -6,7 +6,7 @@
  * 1(x) : Set servo to angle (x) (0-180)
  * 2(i) : Turn off stepper (i) (0 or 1)
  * 3(i) : Turn on stepper (i) (0 or 1)
- * 4(i)(d)(s)(t) : Move stepper (i) direction (d), (s) steps, (t) us per step.
+ * 4(i)(d)(s)(2t) : Move stepper (i) direction (d), (s) steps, (t) (2byte unsigned) us per step.
 */
 
 #include <Servo.h>
@@ -15,12 +15,21 @@ constexpr int SERVO_OFFSET = 0;
 
 
 void setup() {
+    Serial.begin(9600);
+
     Servo servo;
     servo.attach(8);
     servo.write(SERVO_OFFSET);
 
+    pinMode(LED_BUILTIN, OUTPUT);
+    for (int i = 2; i <= 7; i++) {
+        pinMode(i, OUTPUT);
+    }
+
     while (true) {
+        digitalWrite(LED_BUILTIN, HIGH);
         while (Serial.available() == 0);
+        digitalWrite(LED_BUILTIN, LOW);
 
         // Get one byte to determine command
         int command = Serial.read();
@@ -52,6 +61,7 @@ void setup() {
                 int dir = Serial.read();
                 int steps = Serial.read();
                 int time = Serial.read();
+                time = time << 8 | Serial.read();
 
                 digitalWrite(pin_offset + 1, dir);
                 for (int i = 0; i < steps; i++) {
