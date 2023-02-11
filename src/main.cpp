@@ -56,10 +56,11 @@ void small_scramble(Cube& cube) {
 
 int main() {
     Cube cube(3);
-    small_scramble(cube);
+    //small_scramble(cube);
+    scramble(cube);
     std::cout << cube << std::endl;
 
-    HashTable hash;
+    HashTable hash(100000007);
     std::vector<Move> moves;
     dfs_3x3(hash, cube, 30, moves);
     std::cout << moves.size() << std::endl;
