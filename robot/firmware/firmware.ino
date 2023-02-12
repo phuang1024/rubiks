@@ -16,7 +16,7 @@
 
 #include <Servo.h>
 
-constexpr int SERVO_OFFSET = 0;
+constexpr int SERVO_OFFSET = 22;
 
 
 uint16_t read16() {
