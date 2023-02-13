@@ -58,6 +58,16 @@ class Color:
             case _: raise ValueError("Invalid color")
 
     @staticmethod
+    def col_to_name(col: int) -> str:
+        match col:
+            case Color.WHITE: return "White"
+            case Color.YELLOW: return "Yellow"
+            case Color.GREEN: return "Green"
+            case Color.BLUE: return "Blue"
+            case Color.RED: return "Red"
+            case Color.ORANGE: return "Orange"
+
+    @staticmethod
     def col_to_ansi(col: int) -> str:
         match col:
             case Color.WHITE: return Color.ANSI_W

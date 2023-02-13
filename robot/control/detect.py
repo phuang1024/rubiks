@@ -54,3 +54,10 @@ def detect_cube(img):
         return crop
 
     return None
+
+
+def avg_color(img):
+    """
+    Returns the average color of the image.
+    """
+    return np.mean(img, axis=(0, 1))
