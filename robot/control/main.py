@@ -22,8 +22,10 @@ def test_fiducial():
     cap = cv2.VideoCapture(0)
     while True:
         ret, img = cap.read()
-        detect_cube(img)
+        crop = detect_cube(img)
         cv2.imshow("img", img)
+        if crop is not None:
+            cv2.imshow("crop", crop)
         cv2.waitKey(50)
 
 
@@ -75,7 +77,7 @@ def test_arduino():
 
 
 def main():
-    test_arduino()
+    test_fiducial()
 
 
 if __name__ == "__main__":
