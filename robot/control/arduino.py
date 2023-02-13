@@ -7,10 +7,12 @@ import sys
 import time
 
 import serial
+from rubiks import NxCube, NxCubeMove, Color
 
 
 class Arduino:
     turner_spr = 1600
+    cube_size = 7
 
     def __init__(self, port: str):
         print("Connecting to", port)
@@ -19,6 +21,9 @@ class Arduino:
         self._flush_input()
 
         self._pusher_pos = 0
+        self._flipper_pos = True
+        # 1x1x1 cube to track state.
+        self._state = NxCube(1)
 
     def _write(self, data: bytes | list):
         if isinstance(data, list):
@@ -79,21 +84,25 @@ class Arduino:
         self._motor_state(1, True)
 
     def set_flipper(self, state: bool):
-        self._set_servo(0 if state else 88)
+        self._set_servo(0 if state else 86)
+        self._flipper_pos = state
 
-    def turn(self, qturns: int, time: float = 0.25):
+    def turn(self, qturns: int, time: float = 0.5, wipe: int = 15):
         """
         Turn ``qturns`` quarter turns.
         Positive is cw, negative is ccw.
 
         :param time: Is scaled by qturns.
+        :param wipe: Overshoot to compensate for looseness.
         """
         dir = qturns > 0
         qturns = abs(qturns)
         steps = qturns * self.turner_spr // 4
         self._motor_step(0, dir, steps, time * qturns)
+        self._motor_step(0, dir, wipe, 0.05)
+        self._motor_step(0, not dir, wipe, 0.05)
 
-    def set_height(self, height: int, time: float = 0.5):
+    def set_height(self, height: int, time: float = 1):
         """
         :param height: 0 to 7: 0 = at bottom, 1 = turn 1 layer,
             2 = turn 2 layers, etc. 7 = turn all layers.
@@ -104,9 +113,48 @@ class Arduino:
         elif height == 7:
             pos = 3870
         else:
-            pos = 2300 + 280 * (height-2)
+            pos = 2340 + 280 * (height-2)
 
         delta = pos - self._pusher_pos
         time = time * abs(delta) / 2500
         self._motor_step(1, delta < 0, abs(delta), time)
         self._pusher_pos = pos
+
+    def make_move(self, move: NxCubeMove):
+        curr_top = self._state.state[0][0][0]
+        if move.face not in (curr_top, Color.opposite(curr_top)):
+            for i in range(1, 5):
+                if self._state.state[i][0][0] == move.face:
+                    break
+            else:
+                raise ValueError()
+
+            if i in (1, 3):
+                if (i == 3 and self._flipper_pos == True) or (i == 1 and self._flipper_pos == False):
+                    self.set_height(7)
+                    self.turn(2)
+                    for _ in range(2):
+                        self._state.move(NxCubeMove(0, True))
+            else:
+                self.set_height(7)
+                dir = 1 if (i == 4) ^ self._flipper_pos else -1
+                self.turn(dir)
+                self._state.move(NxCubeMove(0, True if dir == 1 else False))
+            self.set_height(0)
+            self._state.move(NxCubeMove(2, self._flipper_pos))
+            self.set_flipper(not self._flipper_pos)
+
+        dir = move.dir
+        slices = move.slices
+        if slices is None:
+            slices = (0, 1)
+        if move.face == Color.opposite(curr_top):
+            dir = not dir
+            slices = [7-s for s in slices]
+
+        slices = sorted(slices)
+        if slices[0] != 0:
+            self.set_height(slices[0])
+            self.turn(1 if (not dir) else -1)
+        self.set_height(slices[1])
+        self.turn(1 if dir else -1)

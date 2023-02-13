@@ -30,6 +30,7 @@ void setup() {
     Serial.begin(9600);
 
     Servo servo;
+    int servo_pos = SERVO_OFFSET;
     servo.attach(8);
     servo.write(SERVO_OFFSET);
 
@@ -60,9 +61,19 @@ void setup() {
         if (command == 0) {
             Serial.write(Serial.read());
         } else if (command == 1) {
-            servo.write(Serial.read() + SERVO_OFFSET);
-            // Just guessing that it takes this long.
+            int target = Serial.read() + SERVO_OFFSET;
+            int delta = (target > servo_pos) ? 1 : -1;
+            for (int i = servo_pos; i != target; i += delta) {
+                servo.write(i);
+                delay(10);
+            }
+            servo_pos = target;
+
+            // Stop servo for a moment to prevent vibration
             delay(200);
+            servo.detach();
+            delay(300);
+            servo.attach(8);
         } else if (command <= 4) {
             int id = Serial.read();
             int pin_offset = 3*id + 2;

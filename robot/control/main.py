@@ -1,10 +1,22 @@
+import sys
 import time
+from curses import wrapper
+from pathlib import Path
+ROOT = Path(__file__).absolute().parent.parent.parent
+sys.path.append(str(ROOT))
 
 import cv2
+from rubiks import NxCube, NxCubeMove, solver
 
 from arduino import Arduino
 from detect import detect_cube
 
+moves = ("B", "B", "F", "F", "D", "D", "F", "F", "L'", "U", "U", "L", "D", "D",
+    "L", "L", "U", "U", "R'", "D", "D", "B'", "D", "L", "L", "F", "F", "R", "R",
+    "U", "U", "R", "D", "R")
+cube = NxCube(3)
+for m in moves:
+    cube.move(m)
 
 def test_fiducial():
     cap = cv2.VideoCapture(0)
@@ -18,6 +30,7 @@ def test_fiducial():
 def test_arduino():
     arduino = Arduino("/dev/ttyACM0")
     #arduino.test()
+    arduino.off()
 
     arduino.on()
     while True:
@@ -25,7 +38,15 @@ def test_arduino():
         if delta == 0:
             break
         arduino._motor_step(0, delta>0, delta, 0.03)
+
+
+    moves = solver.solve_3x3(cube)
+    for m in moves:
+        arduino.make_move(m)
+    arduino.set_height(0)
     arduino.set_flipper(True)
+    arduino.off()
+    stop
 
     """
     arduino.set_flipper(False)
