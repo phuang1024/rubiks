@@ -50,10 +50,31 @@ def detect_cube(img):
         trans = cv2.getPerspectiveTransform(real_corners, dest_points)
         crop = cv2.warpPerspective(img, trans, (width, height))
 
-        crop = crop[85:250, 90:220]
+        crop = crop[88:244, 98:212]
+        crop = cv2.resize(crop, (128, 128), interpolation=cv2.INTER_AREA)
         return crop
 
     return None
+
+
+def grid_image(img):
+    """
+    Converts rubik's image to grid of each cubie's color.
+    """
+    def px_bounds(i):
+        cvt = lambda x: int(128 / 7 * x)
+        lower = cvt(i) + 2
+        upper = cvt(i+1) - 2
+        return (lower, upper)
+
+    face = np.zeros((7, 7, 3), dtype=float)
+    for y in range(7):
+        for x in range(7):
+            xmin, xmax = px_bounds(x)
+            ymin, ymax = px_bounds(y)
+            face[y, x] = avg_color(img[ymin:ymax, xmin:xmax])
+
+    return face
 
 
 def avg_color(img):

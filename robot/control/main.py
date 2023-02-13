@@ -1,94 +1,206 @@
-import curses
 import json
 import os
 import sys
 import time
+from colorsys import rgb_to_hsv
 from pathlib import Path
+from subprocess import run
+
 ROOT = Path(__file__).absolute().parent.parent.parent
 sys.path.append(str(ROOT))
 
 import cv2
+import numpy as np
 from rubiks import Color, NxCube, NxCubeMove, solver
 
 from arduino import Arduino
-from detect import detect_cube, avg_color
+from detect import detect_cube, avg_color, grid_image
 
 
-def center_text(stdscr: "curses._CursesWindow", text: str, pos: tuple[int, int]):
+def next_face(arduino, i):
     """
-    :param pos: (y, x)
+    For scanning.
     """
-    y = pos[0]
-    x = pos[1] - len(text) // 2
-    stdscr.addstr(y, x, text)
+    if i in (2, 3, 4):
+        arduino.set_height(7)
+        arduino.turn(1)
+        arduino.set_height(0)
+    elif i == 0:
+        arduino.set_height(0)
+        arduino.set_flipper(False)
+        arduino.set_height(7)
+        arduino.turn(1)
+        arduino.set_height(0)
+        arduino.set_flipper(True)
+        arduino.set_height(7)
+        arduino.turn(1)
+        arduino.set_height(0)
+    elif i == 5:
+        arduino.set_height(7)
+        arduino.turn(2)
+        arduino.set_height(0)
 
 
-def gui(stdscr: "curses._CursesWindow", arduino, config):
-    curses.noecho()
-    stdscr.nodelay(True)
+def do_config(arduino, cap):
+    print("Config not found. Follow instructions:")
+    print("Place the cube with Yellow on top and Blue in front.")
+    print("Aim a webcam at it and wait for detection.")
 
-    stdscr.clear()
-    h, w = stdscr.getmaxyx()
-    center_text(stdscr, "Rubik's Cube Solver", (0, w//2))
-    stdscr.refresh()
-
-    if config is None:
-        config_win = stdscr.subwin(h-4, w-4, 2, 2)
-        h, w = config_win.getmaxyx()
-        center_text(config_win, "Config file not found", (0, w//2))
-        center_text(config_win, "Place solved cube in robot with Yellow on top and Blue in front.", (1, w//2))
-        center_text(config_win, "Aim a webcam at the robot so all fiducials and the cube are visible.", (0, w//2))
-        center_text(config_win, "The robot will move to get the colors of each face.", (0, w//2))
-        config_win.refresh()
-
-        status_win = stdscr.subwin(h-4, w-4, 4, 2)
-        colors = [1, 2, 3, 4, 0, 5]
-        rgb_colors = []
-        curr_detect = None
-        cap = cv2.VideoCapture(0)
+    colors = [1, 2, 3, 4, 0, 5]
+    rgb_colors = [None] * 6
+    while True:
+        print(f"Waiting for {Color.col_to_name(colors[0])}...")
         while True:
-            time.sleep(0.1)
-
             ret, img = cap.read()
             img = detect_cube(img)
             if img is not None:
-                curr_detect = tuple(avg_color(img))
+                color = avg_color(img)[::-1]
+                color = [int(c) for c in color]
+                if input(f"Detected RGB {color}; OK? [Y/n]").strip().lower() != "n":
+                    break
 
-            status_win.addstr(0, 0, f"Color: {Color.col_to_name(colors[0])}")
-            status_win.addstr(1, 0, "Detected: {}".format(str(curr_detect) if curr_detect is not None else "None"))
-            if curr_detect:
-                status_win.addstr(2, 0, "Press any key to continue")
-            status_win.refresh()
+        rgb_colors[colors.pop(0)] = color
 
-            # Check for key press
-            if status_win.getch() != -1:
-                if curr_detect:
-                    rgb_colors.append(curr_detect)
-                    colors.pop(0)
-                    curr_detect = None
-                    raise ValueError("IT WORKS")
+        # Move robot to next color.
+        if len(colors) == 0:
+            break
+        next_face(arduino, colors[0])
 
+    config = {"colors": rgb_colors}
+    with open("config.json", "w") as f:
+        json.dump(config, f, indent=4)
+
+    return config
+
+
+def scan_cube(arduino, cap, rgb_colors):
+    print("Scanning cube. Place Yellow center on top and Blue in front.")
+
+    hsv_colors = [
+        np.array(rgb_to_hsv(*(np.array(rgb_colors[i]) / 255)))
+        for i in range(6)
+    ]
+
+    colors = [1, 2, 3, 4, 0, 5]
+    faces = [None] * 6
     while True:
-        stdscr.refresh()
+        print(f"Scanning face {Color.col_to_name(colors[0])}...")
+        while True:
+            ret, img = cap.read()
+            img = detect_cube(img)
+            if img is not None:
+                grid = grid_image(img)[..., ::-1]
+                face = np.zeros((7, 7), dtype=int)
+
+                # Find face colors.
+                for y in range(7):
+                    for x in range(7):
+                        distance = [0] * 6
+                        hsv_cubie = np.array(rgb_to_hsv(*(grid[x, y]) / 255))
+                        for i in range(6):
+                            diff = hsv_cubie - hsv_colors[i]
+                            diff[1] *= 0.5
+                            diff[2] *= 0.5
+                            distance[i] = np.linalg.norm(diff)
+                        face[x, y] = np.argmin(distance)
+
+                # Scan is reversed for all except white.
+                if len(colors) != 1:
+                    face = face[::-1, ::-1]
+                else:
+                    pass
+
+                # Print face.
+                for y in range(7):
+                    for x in range(7):
+                        print(Color.col_to_ansi(face[y, x]), end="")
+                        print("# ", end="")
+                    print()
+                print("\033[0m")
+
+                if input(f"Scanned face; OK? [Y/n]").strip().lower() != "n":
+                    print()
+                    break
+
+        faces[colors[0]] = face
+
+        # Move robot to next color.
+        colors.pop(0)
+        if len(colors) == 0:
+            break
+        next_face(arduino, colors[0])
+
+    return faces
+
+
+def manual_scan(arduino, cap, rgb_colors):
+    print("Scanning cube. Place Yellow center on top and Blue in front.")
+
+    colors = [1, 2, 3, 4, 0, 5]
+    faces = [None] * 6
+    while True:
+        values = map(int, input("Enter 9 face values: ").strip().split())
+        values = list(values)
+        values = np.array(values).reshape((3, 3))
+        faces[colors[0]] = values
+
+        # Move robot to next color.
+        colors.pop(0)
+        if len(colors) == 0:
+            break
+        next_face(arduino, colors[0])
+
+    return faces
 
 
 def main():
     arduino = Arduino("/dev/ttyACM0")
+    cap = cv2.VideoCapture(0)
+
+    # Adjust camera exposure
+    params = (
+        "exposure_auto=1",
+        "exposure_absolute=100",
+        "white_balance_temperature_auto=0",
+    )
+    for param in params:
+        run(["v4l2-ctl", "-d", "/dev/video0", "-c", param])
+
+    # Get config
     if os.path.isfile("config.json"):
         with open("config.json", "r") as f:
             config = json.load(f)
     else:
-        config = None
+        config = do_config(arduino, cap)
 
-    try:
-        curses.wrapper(gui, arduino, config)
-    except KeyboardInterrupt:
-        pass
+    scan = scan_cube(arduino, cap, config["colors"])
+    #print("Because of ****, enter faces manually.")
+    #scan = manual_scan(arduino, cap, config["colors"])
+
+    # Testing 3x3 solve
+    cube = NxCube(3)
+    for i in range(6):
+        for y in range(3):
+            for x in range(3):
+                from_x = (x if x != 2 else 6)
+                from_y = (y if y != 2 else 6)
+                cube.state[i, y, x] = scan[i][from_x, from_y]
+
+    print(cube)
+
+    moves = solver.solve_3x3(cube)
+    print(len(moves), "moves")
+    input("Place cube in and press enter to solve.")
+    for m in moves:
+        arduino.make_move(m)
+    arduino.set_height(0)
+    arduino.set_flipper(True)
 
     print("Turning off motors...")
     time.sleep(1)
     arduino.set_height(0)
     arduino.off()
+    cap.release()
 
 
 if __name__ == "__main__":

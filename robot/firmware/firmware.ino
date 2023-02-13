@@ -65,14 +65,14 @@ void setup() {
             int delta = (target > servo_pos) ? 1 : -1;
             for (int i = servo_pos; i != target; i += delta) {
                 servo.write(i);
-                delay(10);
+                delay(4);
             }
             servo_pos = target;
 
             // Stop servo for a moment to prevent vibration
-            delay(200);
+            delay(100);
             servo.detach();
-            delay(300);
+            delay(200);
             servo.attach(8);
         } else if (command <= 4) {
             int id = Serial.read();

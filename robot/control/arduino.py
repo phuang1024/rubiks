@@ -86,8 +86,9 @@ class Arduino:
     def set_flipper(self, state: bool):
         self._set_servo(0 if state else 86)
         self._flipper_pos = state
+        time.sleep(0.1)
 
-    def turn(self, qturns: int, time: float = 0.5, wipe: int = 15):
+    def turn(self, qturns: int, time: float = 0.2, wipe: int = 15):
         """
         Turn ``qturns`` quarter turns.
         Positive is cw, negative is ccw.
@@ -102,7 +103,7 @@ class Arduino:
         self._motor_step(0, dir, wipe, 0.05)
         self._motor_step(0, not dir, wipe, 0.05)
 
-    def set_height(self, height: int, time: float = 1):
+    def set_height(self, height: int, time: float = 0.6):
         """
         :param height: 0 to 7: 0 = at bottom, 1 = turn 1 layer,
             2 = turn 2 layers, etc. 7 = turn all layers.
@@ -111,9 +112,9 @@ class Arduino:
         if height == 0:
             pos = 0
         elif height == 7:
-            pos = 3870
+            pos = 3500
         else:
-            pos = 2340 + 280 * (height-2)
+            pos = 1800 + 248 * (height-1)
 
         delta = pos - self._pusher_pos
         time = time * abs(delta) / 2500
