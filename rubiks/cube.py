@@ -21,6 +21,7 @@ class NxCube:
     # State is np array shape (6, n, n)
     # See docs for the order of stuff.
     state: np.ndarray
+    maps: list[list[NxCubeMove]]
 
     def __init__(self, n: int) -> None:
         """
@@ -28,6 +29,7 @@ class NxCube:
         """
         self.n = n
         self.stack = []
+        self.maps = []
 
         self.state = np.zeros((6, n, n), dtype=np.int8)
         self.state[0] = Color.YELLOW
@@ -128,6 +130,41 @@ class NxCube:
         """
         for move in moves:
             self.move(move)
+
+    def push_map(self, top: int, front: int) -> list[NxCubeMove]:
+        """
+        Perform a series of moves to rotate whole cube to desired orientation.
+        Mapping is relative to std pos: No matter current map, assume top is Yellow and front is Blue.
+        After map, turning "Yellow" (top) face will turn whatever top face is.
+        Uses pop_map() to remove.
+
+        :return: Moves performed.
+        """
+        find_lateral = lambda cube, x: [i for i in range(1, 5) if cube[i][0][0] == x][0]
+
+        orient = NxCube(self.n)
+
+        if orient.state[5][0][0] == top:
+            for _ in range(2):
+                orient.move(NxCubeMove("F", True, (0, self.n)))
+        elif orient.state[0][0][0] != top:
+            face = top % 4 + 1
+            orient.move(NxCubeMove(face, True, (0, self.n)))
+
+        lat = find_lateral(orient.state, front) - 1
+        for _ in range(lat):
+            orient.move(NxCubeMove("U", True, (0, self.n)))
+
+        moves = orient.stack
+        self.moves(moves)
+        self.maps.append(moves)
+        return moves
+
+    def pop_map(self) -> list[NxCubeMove]:
+        moves = self.maps.pop()
+        moves = list(reversed([m.invert() for m in moves]))
+        self.moves(moves)
+        return moves
 
     def _turn(self, face_ind: int, dir: bool) -> None:
         """
