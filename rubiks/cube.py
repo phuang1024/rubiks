@@ -166,6 +166,15 @@ class NxCube:
         self.moves(moves)
         return moves
 
+    def scramble(self, length: int | None = None) -> None:
+        """
+        :param length: Amount of moves. If None, is n^2 * 3
+        """
+        if length is None:
+            length = self.n ** 2 * 3
+        for _ in range(length):
+            self.move(NxCubeMove.random(self.n))
+
     def _turn(self, face_ind: int, dir: bool) -> None:
         """
         ONLY turns the face. Doesn't change the lateral slices affected.

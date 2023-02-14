@@ -23,7 +23,7 @@ def move_all_centers(cube: NxCube, from_face: int, to_face: int, cubie: int):
         todo = None
         for y in range(1, center_size + 1):
             for x in range(1, center_size + 1):
-                if cube.state[from_face, y, x] == cubie:
+                if cube.state[0, y, x] == cubie:
                     done = False
                     todo = (x, y)
                     break
@@ -35,7 +35,6 @@ def move_all_centers(cube: NxCube, from_face: int, to_face: int, cubie: int):
 
         # Spin faces to good position
         subtract = cube.n - 1
-        # TODO BUG
         positions = (
             (todo[0], todo[1]),
             (subtract - todo[1], todo[0]),
@@ -44,11 +43,12 @@ def move_all_centers(cube: NxCube, from_face: int, to_face: int, cubie: int):
         )
         # X is more important than Y.
         topleft = min(positions, key=lambda p: 1000*p[0] + p[1])
+        topleft_ind = positions.index(topleft)
 
-        from_steps = positions.index(todo)
+        from_steps = (positions.index(todo) - topleft_ind) % 4
         for i, p in enumerate(positions):
-            if cube.state[to_face, p[1], p[0]] != cubie:
-                to_steps = i
+            if cube.state[1, p[1], p[0]] != cubie:
+                to_steps = (i - topleft_ind) % 4
                 break
         else:
             raise ValueError("No position to move to")
@@ -68,19 +68,22 @@ def move_all_centers(cube: NxCube, from_face: int, to_face: int, cubie: int):
         cube.move("F")
         cube.move(NxCubeMove("R", True, right_slice))
 
-        print("Topleft is ", topleft)
-        print("From steps is ", from_steps)
-        print("To steps is ", to_steps)
-        input("Enter to next.")
-
     cube.pop_map()
 
 def solve_centers(cube: NxCube):
     for to_face in range(6):
+        # First move opposite side to intermediate face.
         opp = Color.opposite(to_face)
+        if to_face <= 2:
+            inter = to_face + 1
+        else:
+            inter = None
+        if inter is not None:
+            move_all_centers(cube, opp, inter, to_face)
+
+        # Now move all from lateral.
         from_faces = list(range(6))
         from_faces.remove(to_face)
         from_faces.remove(opp)
-        from_faces.insert(0, opp)
-        for from_face in from_faces:
-            move_all_centers(cube, from_face, to_face, to_face)
+        for fro in from_faces:
+            move_all_centers(cube, fro, to_face, to_face)

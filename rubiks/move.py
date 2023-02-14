@@ -2,6 +2,8 @@ __all__ = (
     "NxCubeMove",
 )
 
+import random
+
 from .constants import *
 
 
@@ -51,6 +53,20 @@ class NxCubeMove:
             slices = None
 
         return cls(face, dir, slices)
+
+    @classmethod
+    def random(cls, n: int):
+        """
+        Random face, slice, dir.
+        Does not go past n/2
+        """
+        face = random.randint(0, 5)
+        limit = n // 2
+        slice1 = random.randint(0, limit-1)
+        slice2 = random.randint(slice1+1, limit)
+        dir = random.randint(0, 1) == 0
+
+        return cls(face, dir, (slice1, slice2))
 
     def __repr__(self):
         s = Color.col_to_face(self.face)
