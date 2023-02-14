@@ -41,86 +41,18 @@ def next_face(arduino, i):
         arduino.set_height(0)
 
 
-def do_config(arduino, cap):
-    print("Config not found. Follow instructions:")
-    print("Place the cube with Yellow on top and Blue in front.")
-    print("Aim a webcam at it and wait for detection.")
+def foreach_face(arduino, callback, args=(), kwargs={}):
+    """
+    For each face of the cube, call the function and return aggregate results.
+    Calls in the order (blue, red, green, orange, yellow, white).
+    But results are order (yellow, blue, red, green, orange, white).
 
+    Callback takes args (color, *args, **kwargs)
+    """
     colors = [1, 2, 3, 4, 0, 5]
-    rgb_colors = [None] * 6
+    ret = [None] * 6
     while True:
-        print(f"Waiting for {Color.col_to_name(colors[0])}...")
-        while True:
-            ret, img = cap.read()
-            img = detect_cube(cap)
-            if img is not None:
-                color = avg_color(img)[::-1]
-                color = [int(c) for c in color]
-                if input(f"Detected RGB {color}; OK? [Y/n]").strip().lower() != "n":
-                    break
-
-        rgb_colors[colors.pop(0)] = color
-
-        # Move robot to next color.
-        if len(colors) == 0:
-            break
-        next_face(arduino, colors[0])
-
-        for _ in range(10):
-            cap.read()
-
-    config = {"colors": rgb_colors}
-    with open("config.json", "w") as f:
-        json.dump(config, f, indent=4)
-
-    return config
-
-
-def scan_cube(arduino, cap, rgb_colors):
-    print("Scanning cube. Place Yellow center on top and Blue in front.")
-
-    hsv_colors = [
-        np.array(rgb_to_hsv(*(np.array(rgb_colors[i]) / 255)))
-        for i in range(6)
-    ]
-
-    colors = [1, 2, 3, 4, 0, 5]
-    faces = [None] * 6
-    while True:
-        print(f"Scanning face {Color.col_to_name(colors[0])}...")
-        while True:
-            ret, img = cap.read()
-            img = detect_cube(cap)
-            if img is not None:
-                grid = grid_image(img)[..., ::-1]
-                face = np.zeros((7, 7), dtype=int)
-
-                # Find face colors.
-                for y in range(7):
-                    for x in range(7):
-                        distance = [0] * 6
-                        hsv_cubie = np.array(rgb_to_hsv(*(grid[x, y]) / 255))
-                        for i in range(6):
-                            diff = hsv_cubie - hsv_colors[i]
-                            distance[i] = np.linalg.norm(grid[x, y] - rgb_colors[i])
-                        face[x, y] = np.argmin(distance)
-
-                # Print face.
-                for y in range(7):
-                    for x in range(7):
-                        print(Color.col_to_ansi(face[y, x]), end="")
-                        print("# ", end="")
-                    print()
-                print("\033[0m")
-
-                if input(f"Scanned face; OK? [Y/n]").strip().lower() != "n":
-                    print()
-                    break
-
-        # White is reversed.
-        if len(colors) == 1:
-            face = face[::-1, ::-1]
-        faces[colors[0]] = face
+        ret[colors[0]] = callback(colors[0], *args, **kwargs)
 
         # Move robot to next color.
         colors.pop(0)
@@ -128,10 +60,63 @@ def scan_cube(arduino, cap, rgb_colors):
             break
         next_face(arduino, colors[0])
 
-        for _ in range(10):
-            cap.read()
+    return ret
 
-    return faces
+
+def avg_face_color(color, cap):
+    for _ in range(10):
+        cap.read()
+
+    print(f"Waiting for {Color.col_to_name(color)}...")
+    while True:
+        ret, img = cap.read()
+        img = detect_cube(cap)
+        if img is not None:
+            color = avg_color(img)[::-1]
+            color = [int(c) for c in color]
+            if input(f"Detected RGB {color}; OK? [Y/n]").strip().lower() != "n":
+                break
+
+    return color
+
+
+def scan_face(color, cap, rgb_colors):
+    for _ in range(10):
+        cap.read()
+
+    print(f"Scanning face {Color.col_to_name(color)}...")
+    while True:
+        ret, img = cap.read()
+        img = detect_cube(cap)
+        if img is not None:
+            grid = grid_image(img)[..., ::-1]
+            face = np.zeros((7, 7), dtype=int)
+
+            # Find face colors.
+            for y in range(7):
+                for x in range(7):
+                    distance = [0] * 6
+                    for i in range(6):
+                        distance[i] = np.linalg.norm(grid[x, y] - rgb_colors[i])
+                    face[x, y] = np.argmin(distance)
+
+            # Print face.
+            for y in range(7):
+                for x in range(7):
+                    print(Color.col_to_ansi(face[y, x]), end="")
+                    print("# ", end="")
+                print()
+            print("\033[0m")
+
+            if input(f"Scanned face; OK? [Y/n]").strip().lower() != "n":
+                print()
+                break
+
+    # White is reversed.
+    if color == 5:
+        face = face[::-1, ::-1]
+
+    return face
 
 
 def main():
@@ -141,22 +126,28 @@ def main():
     # Adjust camera exposure
     params = (
         "exposure_auto=1",
-        "exposure_absolute=300",
+        "exposure_absolute=40",
         "white_balance_temperature_auto=0",
     )
     for param in params:
         run(["v4l2-ctl", "-d", "/dev/video0", "-c", param])
+
+    print("In all cases, place cube Yellow up and Blue front.")
 
     # Get config
     if os.path.isfile("config.json"):
         with open("config.json", "r") as f:
             config = json.load(f)
     else:
-        config = do_config(arduino, cap)
+        print("Config file not found.")
+        print("Place solved cube inside the robot to calibrate color of each face.")
+        colors = foreach_face(arduino, avg_face_color, (cap,))
+        config = {"colors": colors}
+        with open("config.json", "w") as f:
+            json.dump(config, f, indent=4)
 
-    scan = scan_cube(arduino, cap, config["colors"])
-    #print("Because of ****, enter faces manually.")
-    #scan = manual_scan(arduino, cap, config["colors"])
+    input("Press enter to begin scanning cube.")
+    scan = foreach_face(arduino, scan_face, (cap, config["colors"]))
 
     # Testing 3x3 solve
     cube = NxCube(3)
@@ -167,10 +158,8 @@ def main():
                 from_y = (y if y != 2 else 6)
                 cube.state[i, y, x] = scan[i][from_y, from_x]
 
-    print(cube)
-
     moves = solver.solve_3x3(cube)
-    print(len(moves), "moves")
+    print("Solved 3x3 in", len(moves), "moves")
     input("Place cube in and press enter to solve.")
     for m in moves:
         arduino.make_move(m)
