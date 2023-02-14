@@ -81,7 +81,7 @@ def avg_face_color(color, cap):
     return color
 
 
-def scan_face(color, cap, rgb_colors):
+def scan_face(color, cap, rgb_colors, auto: bool):
     for _ in range(10):
         cap.read()
 
@@ -109,7 +109,7 @@ def scan_face(color, cap, rgb_colors):
                 print()
             print("\033[0m")
 
-            if input(f"Scanned face; OK? [Y/n]").strip().lower() != "n":
+            if auto or input(f"Scanned face; OK? [Y/n]").strip().lower() != "n":
                 print()
                 break
 
@@ -123,6 +123,7 @@ def scan_face(color, cap, rgb_colors):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", type=int, default=0)
+    parser.add_argument("--auto", help="No user input", action="store_true")
     args = parser.parse_args()
 
     arduino = Arduino("/dev/ttyACM0")
@@ -151,8 +152,10 @@ def main():
         with open("config.json", "w") as f:
             json.dump(config, f, indent=4)
 
+    if args.auto:
+        print("Auto mode: After pressing enter, robot will scan and solve cube.")
     input("Press enter to begin scanning cube.")
-    scan = foreach_face(arduino, scan_face, (cap, config["colors"]))
+    scan = foreach_face(arduino, scan_face, (cap, config["colors"], args.auto))
 
     # Testing 3x3 solve
     cube = NxCube(3)
@@ -166,7 +169,7 @@ def main():
     moves = solver.solve_3x3(cube)
     print("Solved 3x3 in", len(moves), "moves")
 
-    if input("Enter (1) to automatically move to standard position; nothing to skip: ").strip() == "1":
+    if args.auto or input("Enter (1) to automatically move to standard position; nothing to skip: ").strip() == "1":
         arduino.set_height(7)
         arduino.turn(1)
         arduino.set_height(0)
@@ -179,7 +182,8 @@ def main():
         arduino.turn(1)
         arduino.set_height(0)
 
-    input("Make sure cube is in standard position. Press enter to solve.")
+    if not args.auto:
+        input("Make sure cube is in standard position. Press enter to solve.")
 
     for m in moves:
         arduino.make_move(m)
