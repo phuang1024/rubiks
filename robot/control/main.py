@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import sys
@@ -120,8 +121,12 @@ def scan_face(color, cap, rgb_colors):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--video", type=int, default=0)
+    args = parser.parse_args()
+
     arduino = Arduino("/dev/ttyACM0")
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(args.video)
 
     # Adjust camera exposure
     params = (
@@ -130,7 +135,7 @@ def main():
         "white_balance_temperature_auto=0",
     )
     for param in params:
-        run(["v4l2-ctl", "-d", "/dev/video0", "-c", param])
+        run(["v4l2-ctl", "-d", f"/dev/video{args.video}", "-c", param])
 
     print("In all cases, place cube Yellow up and Blue front.")
 
@@ -160,7 +165,22 @@ def main():
 
     moves = solver.solve_3x3(cube)
     print("Solved 3x3 in", len(moves), "moves")
-    input("Place cube in and press enter to solve.")
+
+    if input("Enter (1) to automatically move to standard position; nothing to skip: ").strip() == "1":
+        arduino.set_height(7)
+        arduino.turn(1)
+        arduino.set_height(0)
+        arduino.set_flipper(False)
+        arduino.set_height(7)
+        arduino.turn(-1)
+        arduino.set_height(0)
+        arduino.set_flipper(True)
+        arduino.set_height(7)
+        arduino.turn(1)
+        arduino.set_height(0)
+
+    input("Make sure cube is in standard position. Press enter to solve.")
+
     for m in moves:
         arduino.make_move(m)
     arduino.set_height(0)
