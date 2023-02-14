@@ -1,3 +1,7 @@
+__all__ = (
+    "solve_3x3",
+)
+
 import os
 import shutil
 import time
