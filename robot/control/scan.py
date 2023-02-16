@@ -1,5 +1,6 @@
-import numpy as np
+from colorsys import rgb_to_hsv
 
+import numpy as np
 from rubiks import *
 
 from detect import detect_cube, avg_color, grid_image
@@ -72,6 +73,9 @@ def avg_face_color(color, cap):
 
 
 def scan_face(color, cap, rgb_colors, auto: bool):
+    hsv_colors = [rgb_to_hsv(*rgb) for rgb in rgb_colors]
+    hsv_colors = [np.array(hsv) for hsv in hsv_colors]
+
     for _ in range(10):
         cap.read()
 
@@ -86,9 +90,10 @@ def scan_face(color, cap, rgb_colors, auto: bool):
             # Find face colors.
             for y in range(7):
                 for x in range(7):
+                    hsv = np.array(rgb_to_hsv(*grid[x, y]))
                     distance = [0] * 6
                     for i in range(6):
-                        distance[i] = np.linalg.norm(grid[x, y] - rgb_colors[i])
+                        distance[i] = np.linalg.norm((hsv_colors[i] - hsv)[:2])
                     face[x, y] = np.argmin(distance)
 
             # Print face.

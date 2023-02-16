@@ -15,7 +15,7 @@ class _fiducials:
         """
         Detects the fiducials in the image.
         """
-        if False:
+        if True:
             cv2.imshow("original", img)
             cv2.waitKey(1)
 
@@ -81,9 +81,11 @@ def detect_cube(cap):
         dest_points = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype=np.float32)
         trans = cv2.getPerspectiveTransform(crop_corners, dest_points)
         crop = cv2.warpPerspective(img, trans, (width, height))
+        cv2.imshow("crop", crop)
 
-        crop = crop[62:205, 91:205]
+        crop = crop[62:205, 96:206]
         crop = cv2.resize(crop, (128, 128), interpolation=cv2.INTER_AREA)
+        cv2.imshow("cube", crop)
         return crop
 
     return None

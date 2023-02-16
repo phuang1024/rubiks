@@ -23,7 +23,7 @@ def setup_camera(args):
     # Adjust camera exposure
     params = (
         "exposure_auto=1",
-        "exposure_absolute=170",
+        "exposure_absolute=28",
         "white_balance_temperature_auto=0",
     )
     for param in params:
@@ -95,6 +95,7 @@ def main():
     args = parser.parse_args()
 
     arduino = Arduino("/dev/ttyACM0")
+    arduino.set_flipper(True)
     cap = setup_camera(args)
 
     print("In all cases, place cube Yellow up and Blue front.")
@@ -127,6 +128,7 @@ def main():
     time.sleep(2)
     arduino.set_height(0)
     arduino.set_flipper(True)
+    time.sleep(2)
     arduino.off()
 
 
