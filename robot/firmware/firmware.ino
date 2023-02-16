@@ -16,8 +16,6 @@
 
 #include <Servo.h>
 
-constexpr int SERVO_OFFSET = 22;
-
 
 uint16_t read16() {
     uint16_t val = Serial.read();
@@ -30,9 +28,7 @@ void setup() {
     Serial.begin(9600);
 
     Servo servo;
-    int servo_pos = SERVO_OFFSET;
     servo.attach(8);
-    servo.write(SERVO_OFFSET);
 
     pinMode(LED_BUILTIN, OUTPUT);
     for (int i = 2; i <= 7; i++) {
@@ -61,19 +57,9 @@ void setup() {
         if (command == 0) {
             Serial.write(Serial.read());
         } else if (command == 1) {
-            int target = Serial.read() + SERVO_OFFSET;
-            int delta = (target > servo_pos) ? 1 : -1;
-            for (int i = servo_pos; i != target; i += delta) {
-                servo.write(i);
-                delay(4);
-            }
-            servo_pos = target;
-
-            // Stop servo for a moment to prevent vibration
-            delay(100);
-            servo.detach();
+            int target = Serial.read();
+            servo.write(target);
             delay(200);
-            servo.attach(8);
         } else if (command <= 4) {
             int id = Serial.read();
             int pin_offset = 3*id + 2;

@@ -12,6 +12,7 @@ from rubiks import NxCube, NxCubeMove, Color
 
 class Arduino:
     turner_spr = 1600
+    servo_offset = 0
     cube_size = 7
 
     def __init__(self, port: str):
@@ -84,9 +85,10 @@ class Arduino:
         self._motor_state(1, True)
 
     def set_flipper(self, state: bool):
-        self._set_servo(0 if state else 86)
+        pos = 0 if state else 90
+        pos += self.servo_offset
+        self._set_servo(pos)
         self._flipper_pos = state
-        time.sleep(0.1)
 
     def turn(self, qturns: int, time: float = 0.3, wipe: int = 15):
         """
