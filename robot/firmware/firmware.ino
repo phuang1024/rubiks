@@ -59,7 +59,7 @@ void setup() {
         } else if (command == 1) {
             int target = Serial.read();
             servo.write(target);
-            delay(200);
+            delay(500);
         } else if (command <= 4) {
             int id = Serial.read();
             int pin_offset = 3*id + 2;

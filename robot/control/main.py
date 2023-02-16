@@ -71,16 +71,17 @@ def solve(args, config, arduino, cap):
 
     for m in tqdm(center_moves, desc="Solving centers"):
         arduino.make_move(m)
-    arduino.set_height(0)
-    arduino.set_flipper(True)
 
 
-def scramble(arduino):
+def scramble(args, arduino):
     cube = NxCube(7)
     cube.scramble()
     moves = cube.stack
 
     print(f"Scramble cube: {len(moves)} moves")
+    if not args.auto:
+        input("Press enter to scramble.")
+
     for m in tqdm(moves, desc="Scrambling"):
         arduino.make_move(m)
 
@@ -113,15 +114,19 @@ def main():
         to_standard_pos(args, arduino)
 
     # Do action
-    if args.action == "solve":
-        solve(args, config, arduino, cap)
-    elif args.action == "scramble":
-        scramble(arduino)
+    try:
+        if args.action == "solve":
+            solve(args, config, arduino, cap)
+        elif args.action == "scramble":
+            scramble(args, arduino)
+    except KeyboardInterrupt:
+        print("Keyboard interrupt. Exiting...")
 
     # Cleanup
     print("Turning off motors...")
-    time.sleep(1)
+    time.sleep(2)
     arduino.set_height(0)
+    arduino.set_flipper(True)
     arduino.off()
 
 
