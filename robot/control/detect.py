@@ -19,6 +19,7 @@ class _fiducials:
             cv2.imshow("original", img)
             cv2.waitKey(1)
 
+        """
         img = img.copy().astype(float)
 
         # Increase image contrast
@@ -30,11 +31,12 @@ class _fiducials:
         img[dark] *= fac
         img[light] = 255 - (255 - img[light]) * fac
         img = img.astype(np.uint8)
-        img = cv2.GaussianBlur(img, (3, 3), 0)
+        #img = cv2.GaussianBlur(img, (3, 3), 0)
 
-        if False:
+        if True:
             cv2.imshow("contrast", img)
             cv2.waitKey(1)
+        """
 
         corners, ids, reject = _fiducials.detector.detectMarkers(img)
         corners = [c.astype(int) for c in corners]

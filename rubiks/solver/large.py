@@ -71,6 +71,18 @@ def move_all_centers(cube: NxCube, from_face: int, to_face: int, cubie: int):
     cube.pop_map()
 
 def solve_centers(cube: NxCube):
+    """
+    Clears cube stack at beginning.
+    """
+    # Verify count of centers is correct.
+    expect = (cube.n-2) ** 2
+    count = [0] * 6
+    for i in range(6):
+        count[i] = (cube.state[:, 1:-1, 1:-1] == i).sum()
+    assert count == [expect] * 6
+
+    cube.stack = []
+
     for to_face in range(6):
         # First move opposite side to intermediate face.
         opp = Color.opposite(to_face)
@@ -87,3 +99,5 @@ def solve_centers(cube: NxCube):
         from_faces.remove(opp)
         for fro in from_faces:
             move_all_centers(cube, fro, to_face, to_face)
+
+    return cube.stack

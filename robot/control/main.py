@@ -74,6 +74,9 @@ def avg_face_color(color, cap):
         img = detect_cube(cap)
         if img is not None:
             color = avg_color(img)[::-1]
+            grid = grid_image(img)[..., ::-1]
+            color = grid[3][3]
+
             color = [int(c) for c in color]
             if input(f"Detected RGB {color}; OK? [Y/n]").strip().lower() != "n":
                 break
@@ -132,7 +135,7 @@ def main():
     # Adjust camera exposure
     params = (
         "exposure_auto=1",
-        "exposure_absolute=40",
+        "exposure_absolute=170",
         "white_balance_temperature_auto=0",
     )
     for param in params:
@@ -156,18 +159,16 @@ def main():
         print("Auto mode: After pressing enter, robot will scan and solve cube.")
     input("Press enter to begin scanning cube.")
     scan = foreach_face(arduino, scan_face, (cap, config["colors"], args.auto))
+    cap.release()
 
-    # Testing 3x3 solve
-    cube = NxCube(3)
+    cube = NxCube(7)
     for i in range(6):
-        for y in range(3):
-            for x in range(3):
-                from_x = (x if x != 2 else 6)
-                from_y = (y if y != 2 else 6)
-                cube.state[i, y, x] = scan[i][from_y, from_x]
+        cube.state[i] = scan[i]
 
-    moves = solver.solve_3x3(cube)
-    print("Solved 3x3 in", len(moves), "moves")
+    center_moves = solver.solve_centers(cube)
+    print("Solved cube.")
+    print("Solve summary:")
+    print(f"- Solve centers: {len(center_moves)} moves")
 
     if args.auto or input("Enter (1) to automatically move to standard position; nothing to skip: ").strip() == "1":
         arduino.set_height(7)
@@ -185,7 +186,7 @@ def main():
     if not args.auto:
         input("Make sure cube is in standard position. Press enter to solve.")
 
-    for m in moves:
+    for m in center_moves:
         arduino.make_move(m)
     arduino.set_height(0)
     arduino.set_flipper(True)
@@ -194,7 +195,6 @@ def main():
     time.sleep(1)
     arduino.set_height(0)
     arduino.off()
-    cap.release()
 
 
 if __name__ == "__main__":
